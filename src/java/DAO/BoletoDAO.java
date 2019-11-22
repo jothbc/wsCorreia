@@ -10,9 +10,12 @@ import Bean.Fornecedor;
 import JDBC.ConnectionFactory_Estoque;
 import JDBC.ConnectionFactory_Financas;
 import funcoes.CDate;
+import funcoes.CDbl;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -98,6 +101,19 @@ public class BoletoDAO extends DAO {
         } finally {
             ConnectionFactory_Financas.closeConnection(con, stmt);
         }
+    }
+
+    public double getTotalAberto() throws SQLException {
+        sql = "SELECT sum(valor) as valor FROM boletos where pago is null";
+        stmt = con.prepareStatement(sql);
+        rs = stmt.executeQuery();
+        rs.first();
+        double valor = 0;
+        if (rs.isFirst()) {
+            valor = CDbl.CDblDuasCasas(rs.getDouble("valor"));
+        }
+        ConnectionFactory_Financas.closeConnection(con, stmt, rs);
+        return valor;
     }
 
 }

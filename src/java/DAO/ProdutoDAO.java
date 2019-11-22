@@ -25,50 +25,49 @@ public class ProdutoDAO extends DAO {
     public Produto getProduto(String codigo, boolean preco) {
         Produto produto = new Produto();
         con = ConnectionFactory_Estoque.getConnection();
-        sql = "SELECT * FROM product WHERE code = ?";
-        double qtd = 0;
         try {
+            sql = "SELECT * FROM product WHERE code = ?";
             stmt = con.prepareStatement(sql);
             stmt.setBigDecimal(1, BigDecimal.valueOf(Long.parseLong(codigo)));
             rs = stmt.executeQuery();
             while (rs.next()) {
-                produto.codigo = rs.getString("code");
                 produto.descricao = rs.getString("description");
+                produto.codigo = codigo;
                 produto.quantidade = 0;
-                sql = "SELECT * FROM type_use WHERE code = ?";
-                stmt = con.prepareStatement(sql);
+                break;
+            }
+            /////////////////////////////////////////////////////
+            sql = "SELECT * FROM type_use WHERE code = ?";
+            stmt = con.prepareStatement(sql);
+            stmt.setBigDecimal(1, BigDecimal.valueOf(Long.parseLong(codigo)));
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                produto.quantidade += rs.getDouble("consumption") + rs.getDouble("bakery") + rs.getDouble("exchange") + rs.getDouble("break");
+                break;
+            }
+            /////////////////////////////////////////////////
+            Connection con2 = ConnectionFactoryFirebird.getConnection();
+            sql = "SELECT CD_REF,QT_PROD FROM ESTOQUE WHERE CD_REF = ?";
+            stmt = con2.prepareStatement(sql);
+            stmt.setString(1, codigo);
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                produto.quantidade = rs.getDouble("QT_PROD") - produto.quantidade;
+                break;
+            }
+            ////////////////////////////////////////////////////
+            if (preco) {
+                sql = "SELECT * FROM SUB_TAB_PRECO WHERE CD_REF = ?";
+                stmt = con2.prepareStatement(sql);
                 stmt.setBigDecimal(1, BigDecimal.valueOf(Long.parseLong(codigo)));
                 rs = stmt.executeQuery();
                 while (rs.next()) {
-                    produto.quantidade += rs.getDouble("consumption");
-                    produto.quantidade += rs.getDouble("bakery");
-                    produto.quantidade += rs.getDouble("exchange");
-                    produto.quantidade += rs.getDouble("break");
+                    produto.venda = rs.getDouble("VL_VENDA");
+                    break;
                 }
-                try (Connection con2 = ConnectionFactoryFirebird.getConnection()) {
-                    sql = "SELECT CD_REF,QT_PROD FROM ESTOQUE WHERE CD_REF = ?";
-                    stmt = con2.prepareStatement(sql);
-                    stmt.setString(1, codigo);
-                    rs = stmt.executeQuery();
-                    while (rs.next()) {
-                        qtd = rs.getDouble("QT_PROD") - produto.quantidade;
-                        produto.quantidade = qtd;
-                        break;
-                    }
-                    if (preco) {
-                        sql = "SELECT PRECOS_PDA.* FROM PRECOS_PDA join PRODUTO on PRECOS_PDA.cd_prod = PRODUTO.CD_PROD WHERE PRODUTO.cd_ref = ?";
-                        stmt = con2.prepareStatement(sql);
-                        stmt.setBigDecimal(1, BigDecimal.valueOf(Long.parseLong(codigo)));
-                        rs = stmt.executeQuery();
-                        while (rs.next()) {
-                            produto.venda = rs.getDouble("VL_VENDA");
-                            break;
-                        }
-                    }
-                    con2.close();
-                }
-                return produto;
             }
+            con2.close();
+            return produto;
         } catch (SQLException ex) {
             Logger.getLogger(ProdutoDAO.class.getName()).log(Level.SEVERE, null, ex);
         } finally {

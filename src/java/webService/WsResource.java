@@ -12,13 +12,18 @@ import Bean.HistoricoProduto;
 import Bean.Produto;
 import Bean.Usuario;
 import DAO.BoletoDAO;
+import DAO.ChequeDAO;
 import DAO.FornecedorDAO;
 import DAO.HistoricoDAO;
+import DAO.ImpostoDAO;
 import DAO.ProdutoDAO;
 import DAO.UsuarioDAO;
 import com.google.gson.Gson;
 import funcoes.BoletoFuncoes;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Produces;
@@ -70,45 +75,32 @@ public class WsResource {
             return Response.status(Response.Status.OK).entity(new Gson().toJson(p)).build();
         }
         //return "";
-        return Response.status(Response.Status.NO_CONTENT).entity(p).build();
+        return Response.status(Response.Status.NO_CONTENT).entity(null).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Produto/get/preco/{codigo}")
-    public String getPreco(@PathParam("codigo") String codigo) {
+    public Response getPreco(@PathParam("codigo") String codigo) {
         Produto p = new ProdutoDAO().getProduto(codigo, true);
         if (p != null) {
-            return new Gson().toJson(p);
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(p)).build();
         }
-        return null;
+        return Response.status(Response.Status.NO_CONTENT).entity(null).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Produto/get/historico/{usuario}")
-    public String getHistorico(@PathParam("usuario") String usuario) {
+    public Response getHistorico(@PathParam("usuario") String usuario) {
         List<HistoricoProduto> hist = new HistoricoDAO().getHistorico(usuario.trim().toUpperCase());
-        return new Gson().toJson(hist);
+        //return new Gson().toJson(hist);
+        if (!hist.isEmpty()) {
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(hist)).build();
+        }
+        return Response.status(Response.Status.NO_CONTENT).entity(null).build();
     }
 
-    /*
-     DESABILITAR
-     */
-    @GET
-    @Produces(MediaType.TEXT_HTML)
-    @Path("Produto/insert/{codigo}/{quantidade}/{tabela}")
-    public String addProd(@PathParam("codigo") String codigo, @PathParam("quantidade") double quantidade, @PathParam("tabela") String tabela) {
-        Produto p = new ProdutoDAO().getProduto(codigo, false);
-        if (p != null) {
-            p.tabela = tabela;
-            p.quantidade = quantidade;
-            if (new ProdutoDAO().inserirProduto(p)) {
-                return "concluido";
-            }
-        }
-        return "erro";
-    }
 
     /*
         CRIPMD5 TEM QUE TA NO ANDROID
@@ -116,11 +108,13 @@ public class WsResource {
     @GET
     @Produces(MediaType.TEXT_HTML)
     @Path("Usuario/get/{login}/{senha}")
-    public String getUsuario(@PathParam("login") String login, @PathParam("senha") String senha) {
+    public Response getUsuario(@PathParam("login") String login, @PathParam("senha") String senha) {
         if (new UsuarioDAO().autenticarUsuario(new Usuario(login, cripMD5.criptografar(senha)))) {
-            return "autenticado";
+            //return "autenticado";
+            return Response.status(Response.Status.OK).entity("autenticado").build();
         }
-        return "erro";
+        //return "erro";
+        return Response.status(Response.Status.OK).entity("Não Autenticado").build();
     }
 
     /**
@@ -136,58 +130,118 @@ public class WsResource {
     @POST
     @Path("Produto/post/")
     @Consumes(MediaType.APPLICATION_JSON)
-    public boolean insertProduto(String json) {
+    public Response insertProduto(String json) {
         if (json.isEmpty() || json.equals("")) {
-            return false;
+            return Response.status(Response.Status.BAD_REQUEST).entity(false).build();
         }
-        Produto produto = new Gson().fromJson(json, Produto.class);
-        return new ProdutoDAO().inserirProduto(produto);
+        if (new ProdutoDAO().inserirProduto(new Gson().fromJson(json, Produto.class))) {
+            return Response.status(Response.Status.OK).entity(true).build();
+        }
+        return Response.status(Response.Status.NOT_FOUND).entity(false).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Boleto/get/all")
-    public String getBoletos() {
-        return new Gson().toJson(new BoletoDAO().findAll());
+    public Response getBoletos() {
+        return Response.status(Response.Status.OK).entity(new Gson().toJson(new BoletoDAO().findAll())).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Boleto/get/periodo/{inicio}/{fim}")
-    public String getBoletosPeriodo(@PathParam("inicio") String inicio, @PathParam("fim") String fim) {
+    public Response getBoletosPeriodo(@PathParam("inicio") String inicio, @PathParam("fim") String fim) {
         List<Boleto> boletos = new BoletoDAO().findPeriodo(inicio.replaceAll("-", "/"), fim.replaceAll("-", "/"));
-        return new Gson().toJson(boletos);
+        if (!boletos.isEmpty()) {
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(boletos)).build();
+        }
+        return Response.status(Response.Status.NO_CONTENT).entity(null).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Boleto/get/testeFornecedor/{codigo}")
-    public String getTesteFornecedor(@PathParam("codigo") String codigo) {
+    public Response getTesteFornecedor(@PathParam("codigo") String codigo) {
         if (codigo.length() != 44) {
             codigo = BoletoFuncoes.linhaDigitavelEmCodigoDeBarras(codigo);
             if (codigo == null) {
-                return null;
+                return Response.status(Response.Status.BAD_REQUEST).entity(null).build();
             }
         }
         List<Fornecedor> fornecedores = new FornecedorDAO().getTesteFornecedor(codigo);
-        return new Gson().toJson(fornecedores);
+        if (fornecedores.isEmpty()) {
+            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+        }
+        return Response.status(Response.Status.OK).entity(new Gson().toJson(fornecedores)).build();
+    }
+    
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("Boleto/get/valor/aberto")
+    public Response getValorEmAbertoBoleto(){
+        try {
+            double valor = new BoletoDAO().getTotalAberto();
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(valor)).build();
+        } catch (SQLException ex) {
+            Logger.getLogger(WsResource.class.getName()).log(Level.SEVERE, null, ex);
+            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+        }
+    }
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("Cheque/get/valor/aberto")
+    public Response getValorEmAbertoCheque(){
+        try {
+            double valor = new ChequeDAO().getTotalAberto();
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(valor)).build();
+        } catch (SQLException ex) {
+            Logger.getLogger(WsResource.class.getName()).log(Level.SEVERE, null, ex);
+            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+        }
+    }
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("Imposto/get/valor/aberto")
+    public Response getValorEmAbertoImposto(){
+        try {
+            double valor = new ImpostoDAO().getTotalAberto();
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(valor)).build();
+        } catch (SQLException ex) {
+            Logger.getLogger(WsResource.class.getName()).log(Level.SEVERE, null, ex);
+            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+        }
     }
 
     @POST
     @Path("Boleto/post/")
     @Consumes(MediaType.APPLICATION_JSON)
-    public String addBoleto(String json) {
+    public Response addBoleto(String json) {
         Boleto boleto = new Gson().fromJson(json, Boleto.class);
         if (boleto != null) {
             for (Boleto b : new BoletoDAO().findAll()) {
                 if (b.getCd_barras().equals(boleto.getCd_barras())) {
-                    return "existe";
+                    //tive que colocar status OK para parar de dar erro ao ler o response no android
+                    return Response.status(Response.Status.OK).entity("existe").build();
                 }
             }
             if (new BoletoDAO().addBoleto(boleto)) {
-                return "concluido";
+                return Response.status(Response.Status.OK).entity("concluido").build();
             }
         }
-        return "falha";
+        return Response.status(Response.Status.NOT_FOUND).entity("falha").build();
+    }
+
+    @POST
+    @Path("Fornecedor/post/")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response addFornecedor(String json) {
+        if (json == null || json.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(false).build();
+        }
+        Fornecedor fornecedor = new Gson().fromJson(json, Fornecedor.class);
+        if(new FornecedorDAO().addFornecedor(fornecedor)){
+            return Response.status(Response.Status.OK).entity(true).build();
+        }
+        return Response.status(Response.Status.NOT_FOUND).entity(false).build();
     }
 }
