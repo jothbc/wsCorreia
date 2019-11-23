@@ -8,6 +8,8 @@ package DAO;
 import JDBC.ConnectionFactory_Financas;
 import funcoes.CDbl;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -19,16 +21,20 @@ public class ChequeDAO extends DAO {
         con = ConnectionFactory_Financas.getConnection();
     }
 
-    public double getTotalAberto() throws SQLException {
+    public double getTotalAberto() throws Exception {
         sql = "SELECT sum(valor) as valor FROM cheques where saque is null";
-        stmt = con.prepareStatement(sql);
-        rs = stmt.executeQuery();
-        rs.first();
-        double valor = 0;
-        if (rs.isFirst()) {
-            valor = CDbl.CDblDuasCasas(rs.getDouble("valor"));
+        try {
+            stmt = con.prepareStatement(sql);
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                return CDbl.CDblDuasCasas(rs.getDouble("valor"));
+            }
+            return 0;
+        } catch (SQLException ex) {
+            Logger.getLogger(ChequeDAO.class.getName()).log(Level.SEVERE, null, ex);
+            throw new Exception(ex);
+        } finally {
+            ConnectionFactory_Financas.closeConnection(con, stmt, rs);
         }
-        ConnectionFactory_Financas.closeConnection(con, stmt, rs);
-        return valor;
     }
 }

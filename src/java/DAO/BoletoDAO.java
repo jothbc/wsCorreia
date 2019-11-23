@@ -103,17 +103,21 @@ public class BoletoDAO extends DAO {
         }
     }
 
-    public double getTotalAberto() throws SQLException {
-        sql = "SELECT sum(valor) as valor FROM boletos where pago is null";
-        stmt = con.prepareStatement(sql);
-        rs = stmt.executeQuery();
-        rs.first();
-        double valor = 0;
-        if (rs.isFirst()) {
-            valor = CDbl.CDblDuasCasas(rs.getDouble("valor"));
+    public double getTotalAberto() throws Exception {
+        try {
+            sql = "SELECT sum(valor) as valor FROM boletos where pago is null";
+            stmt = con.prepareStatement(sql);
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                return CDbl.CDblDuasCasas(rs.getDouble("valor"));
+            }
+            return 0;
+        } catch (SQLException ex) {
+            Logger.getLogger(BoletoDAO.class.getName()).log(Level.SEVERE, null, ex);
+            throw new Exception(ex);
+        }finally{
+            ConnectionFactory_Financas.closeConnection(con, stmt, rs);
         }
-        ConnectionFactory_Financas.closeConnection(con, stmt, rs);
-        return valor;
     }
 
 }

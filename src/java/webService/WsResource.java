@@ -153,9 +153,9 @@ public class WsResource {
     public Response getBoletosPeriodo(@PathParam("inicio") String inicio, @PathParam("fim") String fim) {
         List<Boleto> boletos = new BoletoDAO().findPeriodo(inicio.replaceAll("-", "/"), fim.replaceAll("-", "/"));
         if (!boletos.isEmpty()) {
-            return Response.status(Response.Status.OK).entity(new Gson().toJson(boletos)).build();
+            return Response.status(Response.Status.OK).entity(new Gson().toJson(boletos)).build(); //200
         }
-        return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+        return Response.status(Response.Status.NO_CONTENT).entity(null).build(); //204
     }
 
     @GET
@@ -182,9 +182,9 @@ public class WsResource {
         try {
             double valor = new BoletoDAO().getTotalAberto();
             return Response.status(Response.Status.OK).entity(new Gson().toJson(valor)).build();
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(WsResource.class.getName()).log(Level.SEVERE, null, ex);
-            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(null).build();
         }
     }
     @GET
@@ -194,9 +194,9 @@ public class WsResource {
         try {
             double valor = new ChequeDAO().getTotalAberto();
             return Response.status(Response.Status.OK).entity(new Gson().toJson(valor)).build();
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(WsResource.class.getName()).log(Level.SEVERE, null, ex);
-            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(null).build();
         }
     }
     @GET
@@ -206,29 +206,28 @@ public class WsResource {
         try {
             double valor = new ImpostoDAO().getTotalAberto();
             return Response.status(Response.Status.OK).entity(new Gson().toJson(valor)).build();
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(WsResource.class.getName()).log(Level.SEVERE, null, ex);
-            return Response.status(Response.Status.NO_CONTENT).entity(null).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(null).build();
         }
     }
 
     @POST
     @Path("Boleto/post/")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response addBoleto(String json) {
+    public Response putBoleto(String json) {
         Boleto boleto = new Gson().fromJson(json, Boleto.class);
         if (boleto != null) {
             for (Boleto b : new BoletoDAO().findAll()) {
                 if (b.getCd_barras().equals(boleto.getCd_barras())) {
-                    //tive que colocar status OK para parar de dar erro ao ler o response no android
-                    return Response.status(Response.Status.OK).entity("existe").build();
+                    return Response.status(Response.Status.NOT_MODIFIED).entity("existe").build(); //304
                 }
             }
             if (new BoletoDAO().addBoleto(boleto)) {
-                return Response.status(Response.Status.OK).entity("concluido").build();
+                return Response.status(Response.Status.OK).entity("concluido").build(); //200
             }
         }
-        return Response.status(Response.Status.NOT_FOUND).entity("falha").build();
+        return Response.status(Response.Status.NO_CONTENT).entity("falha").build(); //204
     }
 
     @POST
@@ -240,8 +239,8 @@ public class WsResource {
         }
         Fornecedor fornecedor = new Gson().fromJson(json, Fornecedor.class);
         if(new FornecedorDAO().addFornecedor(fornecedor)){
-            return Response.status(Response.Status.OK).entity(true).build();
+            return Response.status(Response.Status.OK).entity(true).build(); //200
         }
-        return Response.status(Response.Status.NOT_FOUND).entity(false).build();
+        return Response.status(Response.Status.NO_CONTENT).entity(false).build(); //204
     }
 }
