@@ -116,6 +116,24 @@ public class Ws2Resource {
         }
     }
 
+    @POST
+    @Path("Boleto/post/")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response putBoleto(String json) {
+        Boleto boleto = new Gson().fromJson(json, Boleto.class);
+        if (boleto != null) {
+            for (Boleto b : new BoletoDAO().findAll()) {
+                if (b.getCd_barras().equals(boleto.getCd_barras())) {
+                    return Response.status(Response.Status.NOT_MODIFIED).entity("existe").build(); //304
+                }
+            }
+            if (new BoletoDAO().addBoleto(boleto)) {
+                return Response.status(Response.Status.OK).entity("concluido").build(); //200
+            }
+        }
+        return Response.status(Response.Status.NO_CONTENT).entity("falha").build(); //204
+    }
+    
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Cheque/get/valor/aberto")
@@ -154,10 +172,30 @@ public class Ws2Resource {
                 return Response.status(Response.Status.OK).entity(new Gson().toJson(cheques)).build();
             }
             default:
-                return Response.status(Response.Status.BAD_REQUEST).entity("Parametros Válidos: tudo,pago,aberto,nulo").build(); //400
+                return Response.status(Response.Status.BAD_REQUEST).entity(new Gson().toJson("Parametros Válidos: tudo,pago,aberto,nulo")).build(); //400
         }
     }
 
+    @POST
+    @Path("Cheque/post/")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response baixarCheque(String seq){
+        try {
+            if(new ChequeDAO().isReleased(Integer.parseInt(seq))){
+                if(new ChequeDAO().baixarCheque(Integer.parseInt(seq))){
+                    return Response.status(Response.Status.OK).entity("true").build(); //200
+                }else{
+                    return Response.status(Response.Status.OK).entity("false").build(); //200
+                }
+            }else{
+                return Response.status(Response.Status.NOT_FOUND).entity("Sequencia incorreta").build(); //404
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Ws2Resource.class.getName()).log(Level.SEVERE, null, ex);
+            return Response.status(Response.Status.BAD_GATEWAY).entity("ParseExeption").build();
+        }
+    }
+    
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("Imposto/get/valor/aberto")
@@ -170,25 +208,7 @@ public class Ws2Resource {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(null).build();
         }
     }
-
-    @POST
-    @Path("Boleto/post/")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response putBoleto(String json) {
-        Boleto boleto = new Gson().fromJson(json, Boleto.class);
-        if (boleto != null) {
-            for (Boleto b : new BoletoDAO().findAll()) {
-                if (b.getCd_barras().equals(boleto.getCd_barras())) {
-                    return Response.status(Response.Status.NOT_MODIFIED).entity("existe").build(); //304
-                }
-            }
-            if (new BoletoDAO().addBoleto(boleto)) {
-                return Response.status(Response.Status.OK).entity("concluido").build(); //200
-            }
-        }
-        return Response.status(Response.Status.NO_CONTENT).entity("falha").build(); //204
-    }
-
+    
     @POST
     @Path("Fornecedor/post/")
     @Consumes(MediaType.APPLICATION_JSON)

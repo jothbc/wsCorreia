@@ -52,7 +52,7 @@ public class ChequeDAO extends DAO {
     }
 
     public List<Cheque> findAberto() {
-        return find("where cheques.saque is null");
+        return find("where cheques.saque is null and emissao is not null");
     }
 
     public List<Cheque> findNulo() {
@@ -141,5 +141,37 @@ public class ChequeDAO extends DAO {
         } finally {
             ConnectionFactory_Financas.closeConnection(con, stmt, rs);
         }
+    }
+    
+    public boolean baixarCheque(int seq){
+        if(new ChequeDAO().notIsNull(seq)){
+            return baixarChequeSeq(seq);
+        }
+        return false;
+    }
+    private boolean baixarChequeSeq(int seq){
+        sql = "UPDATE cheques SET saque = ? WHERE seq = ?";
+        try {
+            stmt = con.prepareStatement(sql);
+            stmt.setString(1, CDate.PTBRtoMYSQL(CDate.getHojePTBR()));
+            stmt.setInt(2, seq);
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException ex) {
+            Logger.getLogger(ChequeDAO.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }finally{
+            ConnectionFactory_Financas.closeConnection(con, stmt);
+        }
+    }
+
+    private boolean notIsNull(int seq) {
+        List<Cheque> nulos = new ChequeDAO().findNulo();
+        for(Cheque cheque:nulos){
+            if(cheque.getSeq()==seq){
+                return false;
+            }
+        }
+        return true;
     }
 }
