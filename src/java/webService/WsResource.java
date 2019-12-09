@@ -5,25 +5,16 @@
  */
 package webService;
 
-import Bean.Boleto;
-import Bean.FiltroData;
-import Bean.Fornecedor;
 import Bean.HistoricoProduto;
+import Bean.MobileAccount;
 import Bean.Produto;
 import Bean.Usuario;
-import DAO.BoletoDAO;
-import DAO.ChequeDAO;
-import DAO.FornecedorDAO;
 import DAO.HistoricoDAO;
-import DAO.ImpostoDAO;
+import DAO.MobileAccountDAO;
 import DAO.ProdutoDAO;
 import DAO.UsuarioDAO;
 import com.google.gson.Gson;
-import funcoes.BoletoFuncoes;
-import java.sql.SQLException;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Produces;
@@ -107,14 +98,32 @@ public class WsResource {
      */
     @GET
     @Produces(MediaType.TEXT_HTML)
-    @Path("Usuario/get/{login}/{senha}")
-    public Response getUsuario(@PathParam("login") String login, @PathParam("senha") String senha) {
-        if (new UsuarioDAO().autenticarUsuario(new Usuario(login, cripMD5.criptografar(senha)))) {
-            //return "autenticado";
-            return Response.status(Response.Status.OK).entity("autenticado").build();
+    @Path("Usuario/get/{login}/{senha}/{mac}")
+    public Response getUsuario(@PathParam("login") String login, @PathParam("senha") String senha, @PathParam("mac") String mac) {
+        if (new UsuarioDAO().autenticarUsuario(new Usuario(login, senha))) {
+            if (mac != null && !mac.equals("")) {
+                MobileAccount account = new MobileAccount(mac, login);
+                if (new MobileAccountDAO().addAcount(account)) {
+                    return Response.status(Response.Status.OK).entity("autenticado").build();
+                } else {
+                    return Response.status(Response.Status.OK).entity("Não foi possível criar a conta.").build();
+                }
+            }else{
+                return Response.status(Response.Status.OK).entity("Ative seu Wifi e tente novamente.").build();
+            }
         }
-        //return "erro";
-        return Response.status(Response.Status.OK).entity("Não Autenticado").build();
+        return Response.status(Response.Status.OK).entity("Não autenticado.").build();
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("Usuario/get/{mac_wifi}")
+    public Response getUsuarioMac(@PathParam("mac_wifi") String mac_wifi) {
+        String response = new UsuarioDAO().getMac(mac_wifi);
+        if (response != null) {
+            return Response.status(Response.Status.OK).entity(response).build();
+        }
+        return Response.status(Response.Status.NOT_FOUND).entity(response).build();
     }
 
     /**
@@ -132,7 +141,7 @@ public class WsResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response insertProduto(String json) {
         if (json.isEmpty() || json.equals("")) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(false).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(false).build(); //400
         }
         if (new ProdutoDAO().inserirProduto(new Gson().fromJson(json, Produto.class))) {
             return Response.status(Response.Status.OK).entity(true).build();
@@ -140,5 +149,4 @@ public class WsResource {
         return Response.status(Response.Status.NOT_FOUND).entity(false).build();
     }
 
-    
 }

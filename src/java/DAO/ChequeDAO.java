@@ -96,14 +96,23 @@ public class ChequeDAO extends DAO {
     }
 
     public boolean addCheque(Cheque c) {
-        sql = "INSERT INTO cheques(seq,emissao,vencimento,fornecedor_id,valor) VALUES (?,?,?,?,?)";
+        if (c.getFornecedor().getNome().equals("NULO")) {
+            sql = "INSERT INTO cheques(seq,fornecedor_id) VALUES (?,?)";
+        } else {
+            sql = "INSERT INTO cheques(seq,emissao,vencimento,fornecedor_id,valor) VALUES (?,?,?,?,?)";
+        }
         try {
             stmt = con.prepareStatement(sql);
-            stmt.setInt(1, c.getSeq());
-            stmt.setString(2, CDate.PTBRtoMYSQL(c.getEmissao()));
-            stmt.setString(3, CDate.PTBRtoMYSQL(c.getPredatado()));
-            stmt.setInt(4, c.getFornecedor().getId());
-            stmt.setDouble(5, c.getValor());
+            if (c.getFornecedor().getNome().equals("NULO")) {
+                stmt.setInt(1, c.getSeq());
+                stmt.setInt(2, c.getFornecedor().getId());
+            } else {
+                stmt.setInt(1, c.getSeq());
+                stmt.setString(2, CDate.PTBRtoMYSQL(c.getEmissao()));
+                stmt.setString(3, CDate.PTBRtoMYSQL(c.getPredatado()));
+                stmt.setInt(4, c.getFornecedor().getId());
+                stmt.setDouble(5, c.getValor());
+            }
             stmt.execute();
             return true;
         } catch (SQLException ex) {
@@ -113,11 +122,11 @@ public class ChequeDAO extends DAO {
             ConnectionFactory_Financas.closeConnection(con, stmt, rs);
         }
     }
-    
-    public boolean isReleased(int seq) throws Exception{
-        sql ="SELECT * FROM cheques WHERE seq = ?";
+
+    public boolean isReleased(int seq) throws Exception {
+        sql = "SELECT * FROM cheques WHERE seq = ?";
         try {
-            stmt=con.prepareStatement(sql);
+            stmt = con.prepareStatement(sql);
             stmt.setInt(1, seq);
             rs = stmt.executeQuery();
             return rs.first(); //true se ja existir um
@@ -125,7 +134,7 @@ public class ChequeDAO extends DAO {
             Logger.getLogger(ChequeDAO.class.getName()).log(Level.SEVERE, null, ex);
             throw new Exception("Erro na função isRealeased no ChequeDAO");
         }
-        
+
     }
 
     public int getProximo() throws Exception {
@@ -134,7 +143,7 @@ public class ChequeDAO extends DAO {
             stmt = con.prepareStatement(sql);
             rs = stmt.executeQuery();
             rs.first();
-            return rs.getInt("seq");
+            return rs.getInt("seq") + 1;
         } catch (SQLException ex) {
             Logger.getLogger(ChequeDAO.class.getName()).log(Level.SEVERE, null, ex);
             throw new Exception("falha ao buscar MAX(SEQ) FROM CHEQUES.");
@@ -142,14 +151,15 @@ public class ChequeDAO extends DAO {
             ConnectionFactory_Financas.closeConnection(con, stmt, rs);
         }
     }
-    
-    public boolean baixarCheque(int seq){
-        if(new ChequeDAO().notIsNull(seq)){
+
+    public boolean baixarCheque(int seq) {
+        if (new ChequeDAO().notIsNull(seq)) {
             return baixarChequeSeq(seq);
         }
         return false;
     }
-    private boolean baixarChequeSeq(int seq){
+
+    private boolean baixarChequeSeq(int seq) {
         sql = "UPDATE cheques SET saque = ? WHERE seq = ?";
         try {
             stmt = con.prepareStatement(sql);
@@ -160,18 +170,33 @@ public class ChequeDAO extends DAO {
         } catch (SQLException ex) {
             Logger.getLogger(ChequeDAO.class.getName()).log(Level.SEVERE, null, ex);
             return false;
-        }finally{
+        } finally {
             ConnectionFactory_Financas.closeConnection(con, stmt);
         }
     }
 
     private boolean notIsNull(int seq) {
         List<Cheque> nulos = new ChequeDAO().findNulo();
-        for(Cheque cheque:nulos){
-            if(cheque.getSeq()==seq){
+        for (Cheque cheque : nulos) {
+            if (cheque.getSeq() == seq) {
                 return false;
             }
         }
         return true;
+    }
+
+    public boolean remove(int seq) {
+        sql = "DELETE FROM cheques WHERE seq =?";
+        try {
+            stmt = con.prepareStatement(sql);
+            stmt.setInt(1, seq);
+            stmt.execute();
+            return true;
+        } catch (SQLException ex) {
+            Logger.getLogger(ChequeDAO.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        } finally {
+            ConnectionFactory_Financas.closeConnection(con, stmt);
+        }
     }
 }

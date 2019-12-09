@@ -11,6 +11,9 @@ import Bean.Fornecedor;
 import Bean.Produto;
 import funcoes.CDate;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import model.bean.Imposto;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Ignore;
@@ -29,7 +32,7 @@ public class ProdutoDAOTest {
     }
 
     @Test
-    //@Ignore
+    @Ignore
     public void testGetProduto() {
         Produto p = new ProdutoDAO().getProduto("7891153096919", true);
         System.out.println(p.descricao);
@@ -64,7 +67,18 @@ public class ProdutoDAOTest {
         for (Fornecedor f : fornecedores) {
             System.out.println(f.getNome());
         }
-
+    }
+    
+    @Test
+    public void testGetImpostos(){
+        try {
+            List<Imposto> impostos = new ImpostoDAO().findAll(ImpostoDAO.ABERTO);
+            System.out.println(impostos.size());
+            double valor = new ImpostoDAO().getTotalAberto();
+            System.out.println(valor);
+        } catch (Exception ex) {
+            Logger.getLogger(ProdutoDAOTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }

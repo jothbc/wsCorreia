@@ -94,4 +94,27 @@ public class FornecedorDAO extends DAO {
         return false;
     }
 
+    public List<Fornecedor> getAllFornecedorCheque() {
+        List<Fornecedor> fornecedors = new ArrayList<>();
+        sql = "SELECT * FROM fornecedor WHERE banco = ?";
+        try {
+            stmt=con.prepareStatement(sql);
+            stmt.setInt(1, -1); // -1 no banco de dados representa fornecedores de cheques
+            rs = stmt.executeQuery();
+            while(rs.next()){
+                Fornecedor f = new Fornecedor();
+                f.setId(rs.getInt("id"));
+                f.setNome(rs.getString("nome"));
+                f.setBanco(rs.getInt("banco"));
+                f.setNumero(rs.getString("numero"));
+                fornecedors.add(f);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(FornecedorDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }finally{
+            ConnectionFactory_Financas.closeConnection(con, stmt, rs);
+        }
+        return fornecedors;
+    }
+
 }

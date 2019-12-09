@@ -37,4 +37,21 @@ public class UsuarioDAO extends DAO {
         return false;
     }
 
+    public String getMac(String mac) {
+        sql = "SELECT * FROM user_mobile WHERE mac_wifi = ?";
+        try {
+            stmt = con.prepareStatement(sql);
+            stmt.setString(1, mac.toUpperCase());
+            rs = stmt.executeQuery();
+            while(rs.next()){
+                return rs.getString("nick");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(UsuarioDAO.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            ConnectionFactory_Estoque.closeConnection(con, stmt, rs);
+        }
+        return null;
+    }
+
 }

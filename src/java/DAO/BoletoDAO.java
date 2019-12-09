@@ -120,4 +120,35 @@ public class BoletoDAO extends DAO {
         }
     }
 
+    public boolean pagar(Boleto boleto) {
+        sql = "UPDATE boletos SET pago = ? WHERE seq = ?";
+        try {
+            stmt= con.prepareStatement(sql);
+            stmt.setString(1, CDate.PTBRtoMYSQL(CDate.getHojePTBR()));
+            stmt.setInt(2, boleto.getId());
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException ex) {
+            Logger.getLogger(BoletoDAO.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }finally{
+            ConnectionFactory_Financas.closeConnection(con, stmt);
+        }
+    }
+    
+    public boolean deletar(Boleto boleto) {
+        sql = "DELETE FROM boletos WHERE seq = ?";
+        try {
+            stmt= con.prepareStatement(sql);
+            stmt.setInt(1, boleto.getId());
+            stmt.execute();
+            return true;
+        } catch (SQLException ex) {
+            Logger.getLogger(BoletoDAO.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }finally{
+            ConnectionFactory_Financas.closeConnection(con, stmt);
+        }
+    }
+
 }
